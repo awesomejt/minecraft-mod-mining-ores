@@ -14,6 +14,9 @@ Supported families: coal, copper, iron, gold, redstone, lapis, diamond,
 emerald, Nether quartz, Nether gold, and ancient debris. Stone and deepslate
 variants can be treated as one family through vanilla ore tags.
 
+The server configuration is stored at `config/jlt_ores.json`. A complete
+self-documented default is checked in at `config/jlt_ores.example.json`.
+
 ## Build
 
 Publish the sibling engine to Maven Local before building from a fresh checkout:

@@ -117,9 +117,9 @@ Ore-specific fields:
 |---|---|---|
 | `requirePickaxe` | `true` | analog of `requireAxe` |
 | `requireSneakForAutoMine` | `true` | analog of `requireSneakForAutoChop` |
-| `maxVeinBlocks` | `64` | veins ≪ trees; cap guards modded mega-veins |
-| `maxHorizontalVeinRadius` | `8` | XZ radius from trigger block |
-| `maxMineDistance` | `64` | → `BalanceSettings.maxHarvestDistance` |
+| `maxVeinBlocks` | `64` | Range `16..2048`; cap guards modded mega-veins |
+| `maxHorizontalVeinRadius` | `8` | Range `4..64`; XZ radius from trigger block |
+| `maxMineDistance` | `64` | Range `8..128`; → `BalanceSettings.maxHarvestDistance` |
 | `matchDeepslateVariants` | `true` | family-wide vs exact-block matching (§3) |
 | `minimumTierByOreFamily` | table below | string map, keys = `OreFamily.configKey()` |
 
