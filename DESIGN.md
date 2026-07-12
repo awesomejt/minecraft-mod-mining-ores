@@ -54,8 +54,11 @@ matters because vanilla's `#minecraft:gold_ores` tag includes
 1. `Blocks.NETHER_GOLD_ORE` → `NETHER_GOLD`
 2. `Blocks.NETHER_QUARTZ_ORE` → `QUARTZ`
 3. `Blocks.ANCIENT_DEBRIS` → `ANCIENT_DEBRIS`
-4. `BlockTags.COAL_ORES / COPPER_ORES / IRON_ORES / GOLD_ORES / REDSTONE_ORES /
-   LAPIS_ORES / DIAMOND_ORES / EMERALD_ORES` → the matching family
+4. Vanilla block tags `coal_ores / copper_ores / iron_ores / gold_ores /
+   redstone_ores / lapis_ores / diamond_ores / emerald_ores` → the matching
+   family. Minecraft 26.2 exposes `BlockTags` constants only for copper, iron,
+   and gold; the other five use equivalent `TagKey`s built from their vanilla
+   `minecraft:<family>_ores` identifiers.
 
 The tag families automatically unify stone/deepslate variants, so a mixed
 `iron_ore`/`deepslate_iron_ore` vein scans as one vein. The vein matcher passed
