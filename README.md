@@ -3,8 +3,9 @@
 Balanced automatic ore-vein mining for Minecraft Java Edition (Fabric), built
 on the shared `mining-engine` library.
 
-Implementation is in progress; see `DESIGN.md` and the master checklist in
-`../mining-engine/TODO.md`.
+The core entrypoint, vein matching, balance planning, and scheduled bound-tool
+harvesting are implemented. See `DESIGN.md` and the master checklist in
+`../mining-engine/TODO.md` for the remaining release work.
 
 - Mod id: `jlt_ores`
 - Entrypoint: `media.jlt.minecraft.mods.ores.OresMod`

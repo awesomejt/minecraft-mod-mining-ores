@@ -77,7 +77,7 @@ Mirrors `TreesMod` at trees commit `4f18707`, minus the tree-only steps:
 
 1. Server level + server player only; state classifies to an `OreFamily`;
    `config.enabled`.
-2. `requireSneakForAutoMine` gate; `requirePickaxe` gate (`PickaxeItem`,
+2. `requireSneakForAutoMine` gate; `requirePickaxe` gate (`ItemTags.PICKAXES`,
    hint `requires_pickaxe`); already-active guard + re-entrancy set
    (same `ACTIVE_PLAYERS` pattern).
 3. Vein scan: `ConnectedBlockScanner.scan(origin, familyMatcher,
@@ -90,14 +90,16 @@ Mirrors `TreesMod` at trees commit `4f18707`, minus the tree-only steps:
    (protection-active from settings + tool, `availableXpAboveFloor`, etc.).
    Map refusals/trim/substitution to hints (§6).
 6. Schedule all planned blocks on the `HarvestScheduler<ServerLevel, ItemStack>`
-   with `matchKind = 0` ("still classifies to the same family/block"),
+   with a mod-side `matchKind` encoding (nonnegative `OreFamily` ordinal for
+   family mode; complemented block registry id for exact-block mode),
    `exhaustionPerBlock = config.exhaustionPerBlock`,
    `xpCostPerBlock = config.xpCostPerBlock`, delay from
    `settings.delayTicksForEfficiencyLevel(efficiency)`.
 
-Port implementations are copies of trees' adapters with `AxeItem → PickaxeItem`
+Port implementations are copies of trees' adapters with `ItemTags.PICKAXES`
 in tool validation; factor nothing across the two mods beyond what the engine
-already shares (the adapters are small and version-coupled by nature).
+already shares (the adapters are small and version-coupled by nature). Minecraft
+26.2 tools are data-driven, so no `PickaxeItem` class exists.
 
 ## 5. Config (`config/jlt_ores.json`, flat, with `_docs`, via engine `JsonConfigStore`)
 
