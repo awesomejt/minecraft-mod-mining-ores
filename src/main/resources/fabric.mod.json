@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "jlt_ores",
+	"version": "${version}",
+	"name": "JLT Ores",
+	"description": "Balanced automatic ore-vein mining with configurable tool gates and resource costs.",
+	"authors": [
+		"Jason Taylor"
+	],
+	"contact": {
+		"sources": "https://github.com/awesomejt/minecraft-mod-mining-ores"
+	},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"media.jlt.minecraft.mods.ores.OresMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
