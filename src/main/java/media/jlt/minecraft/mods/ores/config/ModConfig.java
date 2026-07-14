@@ -6,12 +6,16 @@ import media.jlt.minecraft.engine.balance.BalanceSettings;
 import media.jlt.minecraft.engine.balance.DurabilityProtectionMode;
 import media.jlt.minecraft.engine.balance.TaxMode;
 import media.jlt.minecraft.engine.config.JsonConfigStore;
+import media.jlt.minecraft.engine.config.YamlConfigStore;
 import media.jlt.minecraft.engine.util.ToolTier;
 import media.jlt.minecraft.mods.ores.logic.OreFamily;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -49,18 +53,51 @@ public final class ModConfig {
     public Map<String, String> _docs = defaultDocs();
 
     public static ModConfig load(String modId, Logger logger) {
-        Path configFile = FabricLoader.getInstance().getConfigDir().resolve(modId + ".json");
-        ReloadResult result = fromStoreResult(configStore(configFile, logger).load());
+        ReloadResult result = loadOrMigrateYaml(yamlFile(modId), legacyJsonFile(modId), logger);
         if (result.success()) {
             return result.config();
         }
-        logger.error("Failed to load config at {}: {}. Using defaults.", configFile, result.errorMessage());
+        logger.error("Failed to load config for {}: {}. Using defaults.", modId, result.errorMessage());
         return new ModConfig().sanitize(logger);
     }
 
     public static ReloadResult reload(String modId, Logger logger) {
-        Path configFile = FabricLoader.getInstance().getConfigDir().resolve(modId + ".json");
-        return reload(configFile, logger);
+        return loadOrMigrateYaml(yamlFile(modId), legacyJsonFile(modId), logger);
+    }
+
+    private static Path yamlFile(String modId) {
+        return FabricLoader.getInstance().getConfigDir().resolve(modId + ".yaml");
+    }
+
+    private static Path legacyJsonFile(String modId) {
+        return FabricLoader.getInstance().getConfigDir().resolve(modId + ".json");
+    }
+
+    /**
+     * Prefers {@code yamlFile}; if absent but {@code legacyJsonFile} exists, reads it through the
+     * unchanged JSON path below (preserving every existing value), writes it out as YAML, and
+     * keeps the original file alongside as {@code <name>.json.bak}.
+     */
+    static ReloadResult loadOrMigrateYaml(Path yamlFile, Path legacyJsonFile, Logger logger) {
+        if (Files.isRegularFile(yamlFile) || !Files.isRegularFile(legacyJsonFile)) {
+            return fromStoreResult(yamlConfigStore(yamlFile, logger).reload());
+        }
+
+        ReloadResult legacyResult = reload(legacyJsonFile, logger);
+        if (!legacyResult.success()) {
+            return legacyResult;
+        }
+        try {
+            yamlConfigStore(yamlFile, logger).save(legacyResult.config());
+            Files.move(legacyJsonFile,
+                legacyJsonFile.resolveSibling(legacyJsonFile.getFileName() + ".bak"),
+                StandardCopyOption.REPLACE_EXISTING);
+            logger.info("Migrated {} to {}; old file kept as {}.bak",
+                legacyJsonFile, yamlFile, legacyJsonFile.getFileName());
+        } catch (IOException exception) {
+            return ReloadResult.failure(exception.getMessage());
+        }
+        return legacyResult;
     }
 
     static ReloadResult reload(Path configFile, Logger logger) {
@@ -229,6 +266,195 @@ public final class ModConfig {
         return result.success()
             ? ReloadResult.success(result.config())
             : ReloadResult.failure(result.errorMessage());
+    }
+
+    private static ReloadResult fromStoreResult(YamlConfigStore.ReloadResult<ModConfig> result) {
+        return result.success()
+            ? ReloadResult.success(result.config())
+            : ReloadResult.failure(result.errorMessage());
+    }
+
+    private static YamlConfigStore<ModConfig, PersistedConfig> yamlConfigStore(Path configFile, Logger logger) {
+        Path configDirectory = configFile.getParent();
+        if (configDirectory == null) {
+            configDirectory = Path.of(".");
+        }
+        return new YamlConfigStore<>(
+            configDirectory,
+            configFile.getFileName().toString(),
+            PersistedConfig.class,
+            persistedDocs(),
+            ModConfig::new,
+            config -> config.sanitize(logger),
+            ModConfig::toPersisted,
+            ModConfig::fromPersisted
+        );
+    }
+
+    private PersistedConfig toPersisted() {
+        PersistedConfig persisted = new PersistedConfig();
+        persisted.gates.enabled = enabled;
+        persisted.gates.requirePickaxe = requirePickaxe;
+        persisted.gates.requireSneakForAutoMine = requireSneakForAutoMine;
+        persisted.gates.showGateFeedback = showGateFeedback;
+
+        persisted.timing.enableTimePenalty = enableTimePenalty;
+        persisted.timing.blockBreakDelayTicksByEfficiencyLevel = blockBreakDelayTicksByEfficiencyLevel;
+        persisted.timing.maxInstantBlocksPerTick = maxInstantBlocksPerTick;
+
+        persisted.economy.hunger.enableHungerTax = enableHungerTax;
+        persisted.economy.hunger.exhaustionPerBlock = exhaustionPerBlock;
+        persisted.economy.hunger.hungerTaxFloor = hungerTaxFloor;
+        persisted.economy.hunger.hungerResumeTimeoutTicks = hungerResumeTimeoutTicks;
+        persisted.economy.xp.xpTaxMode = xpTaxMode;
+        persisted.economy.xp.xpCostPerBlock = xpCostPerBlock;
+        persisted.economy.xp.xpTaxFloor = xpTaxFloor;
+        persisted.economy.durability.durabilityMultiplier = durabilityMultiplier;
+        persisted.economy.durability.durabilityProtectionMode = durabilityProtectionMode;
+        persisted.economy.durability.durabilityProtectionFloor = durabilityProtectionFloor;
+        persisted.economy.substitution.enableDurabilityXpSubstitution = enableDurabilityXpSubstitution;
+        persisted.economy.substitution.durabilityXpSubstitutionWindow = durabilityXpSubstitutionWindow;
+        persisted.economy.substitution.xpPerSubstitutedDurabilityPoint = xpPerSubstitutedDurabilityPoint;
+
+        persisted.scanBounds.matchDeepslateVariants = matchDeepslateVariants;
+        persisted.scanBounds.maxVeinBlocks = maxVeinBlocks;
+        persisted.scanBounds.maxHorizontalVeinRadius = maxHorizontalVeinRadius;
+        persisted.scanBounds.maxMineDistance = maxMineDistance;
+
+        persisted.toolTiers = minimumTierByOreFamily;
+        return persisted;
+    }
+
+    private static ModConfig fromPersisted(PersistedConfig persisted) {
+        ModConfig config = new ModConfig();
+        config.enabled = persisted.gates.enabled;
+        config.requirePickaxe = persisted.gates.requirePickaxe;
+        config.requireSneakForAutoMine = persisted.gates.requireSneakForAutoMine;
+        config.showGateFeedback = persisted.gates.showGateFeedback;
+
+        config.enableTimePenalty = persisted.timing.enableTimePenalty;
+        config.blockBreakDelayTicksByEfficiencyLevel = persisted.timing.blockBreakDelayTicksByEfficiencyLevel;
+        config.maxInstantBlocksPerTick = persisted.timing.maxInstantBlocksPerTick;
+
+        config.enableHungerTax = persisted.economy.hunger.enableHungerTax;
+        config.exhaustionPerBlock = persisted.economy.hunger.exhaustionPerBlock;
+        config.hungerTaxFloor = persisted.economy.hunger.hungerTaxFloor;
+        config.hungerResumeTimeoutTicks = persisted.economy.hunger.hungerResumeTimeoutTicks;
+        config.xpTaxMode = persisted.economy.xp.xpTaxMode;
+        config.xpCostPerBlock = persisted.economy.xp.xpCostPerBlock;
+        config.xpTaxFloor = persisted.economy.xp.xpTaxFloor;
+        config.durabilityMultiplier = persisted.economy.durability.durabilityMultiplier;
+        config.durabilityProtectionMode = persisted.economy.durability.durabilityProtectionMode;
+        config.durabilityProtectionFloor = persisted.economy.durability.durabilityProtectionFloor;
+        config.enableDurabilityXpSubstitution = persisted.economy.substitution.enableDurabilityXpSubstitution;
+        config.durabilityXpSubstitutionWindow = persisted.economy.substitution.durabilityXpSubstitutionWindow;
+        config.xpPerSubstitutedDurabilityPoint = persisted.economy.substitution.xpPerSubstitutedDurabilityPoint;
+
+        config.matchDeepslateVariants = persisted.scanBounds.matchDeepslateVariants;
+        config.maxVeinBlocks = persisted.scanBounds.maxVeinBlocks;
+        config.maxHorizontalVeinRadius = persisted.scanBounds.maxHorizontalVeinRadius;
+        config.maxMineDistance = persisted.scanBounds.maxMineDistance;
+
+        config.minimumTierByOreFamily = persisted.toolTiers == null
+            ? new LinkedHashMap<>()
+            : persisted.toolTiers;
+        return config;
+    }
+
+    private static Map<String, String> persistedDocs() {
+        Map<String, String> docs = new LinkedHashMap<>();
+        Map<String, String> flat = defaultDocs();
+        docs.put("gates.enabled", flat.get("enabled"));
+        docs.put("gates.requirePickaxe", flat.get("requirePickaxe"));
+        docs.put("gates.requireSneakForAutoMine", flat.get("requireSneakForAutoMine"));
+        docs.put("gates.showGateFeedback", flat.get("showGateFeedback"));
+        docs.put("timing.enableTimePenalty", flat.get("enableTimePenalty"));
+        docs.put("timing.blockBreakDelayTicksByEfficiencyLevel", flat.get("blockBreakDelayTicksByEfficiencyLevel"));
+        docs.put("timing.maxInstantBlocksPerTick", flat.get("maxInstantBlocksPerTick"));
+        docs.put("economy.hunger.enableHungerTax", flat.get("enableHungerTax"));
+        docs.put("economy.hunger.exhaustionPerBlock", flat.get("exhaustionPerBlock"));
+        docs.put("economy.hunger.hungerTaxFloor", flat.get("hungerTaxFloor"));
+        docs.put("economy.hunger.hungerResumeTimeoutTicks", flat.get("hungerResumeTimeoutTicks"));
+        docs.put("economy.xp.xpTaxMode", flat.get("xpTaxMode"));
+        docs.put("economy.xp.xpCostPerBlock", flat.get("xpCostPerBlock"));
+        docs.put("economy.xp.xpTaxFloor", flat.get("xpTaxFloor"));
+        docs.put("economy.durability.durabilityMultiplier", flat.get("durabilityMultiplier"));
+        docs.put("economy.durability.durabilityProtectionMode", flat.get("durabilityProtectionMode"));
+        docs.put("economy.durability.durabilityProtectionFloor", flat.get("durabilityProtectionFloor"));
+        docs.put("economy.substitution.enableDurabilityXpSubstitution", flat.get("enableDurabilityXpSubstitution"));
+        docs.put("economy.substitution.durabilityXpSubstitutionWindow", flat.get("durabilityXpSubstitutionWindow"));
+        docs.put("economy.substitution.xpPerSubstitutedDurabilityPoint", flat.get("xpPerSubstitutedDurabilityPoint"));
+        docs.put("scanBounds.matchDeepslateVariants", flat.get("matchDeepslateVariants"));
+        docs.put("scanBounds.maxVeinBlocks", flat.get("maxVeinBlocks"));
+        docs.put("scanBounds.maxHorizontalVeinRadius", flat.get("maxHorizontalVeinRadius"));
+        docs.put("scanBounds.maxMineDistance", flat.get("maxMineDistance"));
+        docs.put("toolTiers", flat.get("minimumTierByOreFamily"));
+        return docs;
+    }
+
+    /**
+     * On-disk shape of {@code jlt_ores.yaml}, grouped by theme instead of mirroring this class's
+     * flat field layout. Field names are unchanged from the flat layout so the {@code _docs} text
+     * above (still accurate) and the nested keys stay consistent.
+     */
+    private static final class PersistedConfig {
+        Gates gates = new Gates();
+        Timing timing = new Timing();
+        Economy economy = new Economy();
+        ScanBounds scanBounds = new ScanBounds();
+        Map<String, String> toolTiers = defaultTiers();
+    }
+
+    private static final class Gates {
+        boolean enabled = true;
+        boolean requirePickaxe = true;
+        boolean requireSneakForAutoMine = true;
+        boolean showGateFeedback = true;
+    }
+
+    private static final class Timing {
+        boolean enableTimePenalty = true;
+        Map<String, Integer> blockBreakDelayTicksByEfficiencyLevel = defaultEfficiencyDelays();
+        int maxInstantBlocksPerTick = 8;
+    }
+
+    private static final class Economy {
+        Hunger hunger = new Hunger();
+        Xp xp = new Xp();
+        Durability durability = new Durability();
+        Substitution substitution = new Substitution();
+    }
+
+    private static final class Hunger {
+        boolean enableHungerTax = true;
+        float exhaustionPerBlock = 0.4f;
+        int hungerTaxFloor = 1;
+        int hungerResumeTimeoutTicks = 400;
+    }
+
+    private static final class Xp {
+        String xpTaxMode = "hunger_only";
+        int xpCostPerBlock = 1;
+        int xpTaxFloor = 0;
+    }
+
+    private static final class Durability {
+        int durabilityMultiplier = 3;
+        String durabilityProtectionMode = "all";
+        int durabilityProtectionFloor = 1;
+    }
+
+    private static final class Substitution {
+        boolean enableDurabilityXpSubstitution = false;
+        int durabilityXpSubstitutionWindow = 10;
+        int xpPerSubstitutedDurabilityPoint = 3;
+    }
+
+    private static final class ScanBounds {
+        boolean matchDeepslateVariants = true;
+        int maxVeinBlocks = 64;
+        int maxHorizontalVeinRadius = 8;
+        int maxMineDistance = 64;
     }
 
     public record ReloadResult(ModConfig config, String errorMessage) {

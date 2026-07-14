@@ -1,0 +1,75 @@
+gates:
+  # Default: true. Values: true|false. Master switch for all auto-mine behavior.
+  enabled: true
+  # Default: true. Values: true|false. If true, only pickaxes can trigger auto-mine.
+  requirePickaxe: true
+  # Default: true. Values: true|false. If true, the player must hold Shift while mining.
+  requireSneakForAutoMine: true
+  # Default: true. Values: true|false. Shows rate-limited action-bar gate hints and visible auto-mine status messages.
+  showGateFeedback: true
+timing:
+  # Default: true. Values: true|false. If true, auto-mine applies per-block delay; false uses zero-delay batches capped by maxInstantBlocksPerTick.
+  enableTimePenalty: true
+  # Map keys: 0..5 for unenchanted through Efficiency V. Default ticks: 0=16, 1=8, 2=4, 3=2, 4=1, 5=0. Values are clamped to 0..40; missing levels restore defaults and unknown keys are removed.
+  blockBreakDelayTicksByEfficiencyLevel:
+    '0': 16
+    '1': 8
+    '2': 4
+    '3': 2
+    '4': 1
+    '5': 0
+  # Default: 8. Range: 1..64. Per-player block cap for delay-zero auto-mine.
+  maxInstantBlocksPerTick: 8
+economy:
+  hunger:
+    # Default: true. Values: true|false. If true, automated mining consumes exhaustion per block.
+    enableHungerTax: true
+    # Default: 0.4. Range: 0.0..4.0. Exhaustion applied per automated ore block.
+    exhaustionPerBlock: 0.4
+    # Default: 1. Range: 0..20. Hunger tax preserves this food-level floor; 0 disables the floor.
+    hungerTaxFloor: 1
+    # Default: 400. Range: 20..7200. Paused work resumes if hunger returns before this timeout.
+    hungerResumeTimeoutTicks: 400
+  xp:
+    # Default: hunger_only. Values: hunger_only|xp_only|xp_after_hunger_depleted.
+    xpTaxMode: hunger_only
+    # Default: 1. Range: 0..100. XP points charged per automated ore block when XP tax applies.
+    xpCostPerBlock: 1
+    # Default: 0. Range: 0..100000. XP tax will not consume below this total-XP floor.
+    xpTaxFloor: 0
+  durability:
+    # Default: 3. Range: 1..10. Pickaxe durability cost multiplier for automated ore blocks.
+    durabilityMultiplier: 3
+    # Default: all. Values: off|all|enchanted_only. Controls when the durability floor is enforced.
+    durabilityProtectionMode: all
+    # Default: 1. Range: 0..10000. Auto-mine will not intentionally consume durability below this remaining amount.
+    durabilityProtectionFloor: 1
+  substitution:
+    # Default: false. Values: true|false. Substitutes extra automation durability per successful ore break; vanilla base durability remains.
+    enableDurabilityXpSubstitution: false
+    # Default: 10. Range: 0..1000. Only durability within this many points above the floor may be substituted.
+    durabilityXpSubstitutionWindow: 10
+    # Default: 3. Range: 0..100. XP charged after a successful break per substituted extra durability point.
+    xpPerSubstitutedDurabilityPoint: 3
+scanBounds:
+  # Default: true. Values: true|false. If true, stone and deepslate variants of one ore family connect; false matches only the trigger block type.
+  matchDeepslateVariants: true
+  # Default: 64. Range: 16..2048. Hard cap for connected ore-vein scan size.
+  maxVeinBlocks: 64
+  # Default: 8. Range: 4..64. Maximum horizontal radius from the trigger block.
+  maxHorizontalVeinRadius: 8
+  # Default: 64. Range: 8..128. Cancels queued auto-mine when a target is farther than this distance.
+  maxMineDistance: 64
+# Map keys: all documented ore-family names. Values: wood|stone|copper|iron|diamond|netherite. Invalid values reset to each family's default.
+toolTiers:
+  coal: stone
+  copper: iron
+  iron: iron
+  gold: diamond
+  redstone: diamond
+  lapis: iron
+  diamond: diamond
+  emerald: diamond
+  quartz: stone
+  nether_gold: stone
+  ancient_debris: netherite

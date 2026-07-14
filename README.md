@@ -15,8 +15,14 @@ Supported families: coal, copper, iron, gold, redstone, lapis, diamond,
 emerald, Nether quartz, Nether gold, and ancient debris. Stone and deepslate
 variants can be treated as one family through vanilla ore tags.
 
-The server configuration is stored at `config/jlt_ores.json`. A complete
-self-documented default is checked in at `config/jlt_ores.example.json`.
+The server configuration is stored at `config/jlt_ores.yaml`, grouped by theme
+(`gates`, `timing`, `economy.hunger`, `economy.xp`, `economy.durability`,
+`economy.substitution`, `scanBounds`, `toolTiers`) with each setting's
+description as a `#` comment above it. A complete default is checked in at
+`config/jlt_ores.example.yaml`. A pre-existing `config/jlt_ores.json` from an
+older version is migrated automatically on first launch — its values carry
+over unchanged, and it's kept alongside as `jlt_ores.json.bak`
+(`config/jlt_ores.example.json` is kept for reference as that legacy shape).
 
 ## Build
 
